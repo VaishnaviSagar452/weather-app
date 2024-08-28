@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(to right, #74ebd5, #acb6e5);
+            background-size: cover;
+            background-position: center;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 400px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: background-image 0.5s ease-in-out;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        input {
+            padding: 15px;
+            width: 100%;
+            margin-bottom: 15px;
+            border-radius: 30px;
+            border: 2px solid #ddd;
+            font-size: 1rem;
+        }
+
+        button {
+            padding: 12px 20px;
+            width: 100%;
+            margin-bottom: 15px;
+            border: none;
+            border-radius: 30px;
+            background-color: #4caf50;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #43a047;
+        }
+
+        .weather {
+            margin: 20px 0;
+            background: #fff;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: background-image 0.5s ease-in-out;
+        }
+
+        .weather h2 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .weather p {
+            margin: 5px 0;
+            font-size: 1.1rem;
+            color: #666;
+        }
+
+        .weather img {
+            width: 80px;
+            margin: 10px auto;
+        }
+
+        p.error {
+            color: red;
+            font-size: 1rem;
+        }
+
+        /* Add subtle transition */
+        input, button {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Weather App</h1>
+        <input type="text" id="locationInput" placeholder="Enter city or location">
+        <button id="getWeatherBtn">Get Weather</button>
+        <button id="getLocationBtn">Get My Location's Weather</button>
+        
+        <div class="weather" id="weatherDisplay"></div>
+    </div>
+
+    <script>
+        const apiKey = 'YOUR_API_KEY'; // Replace with your OpenWeatherMap API Key
+        const weatherDisplay = document.getElementById('weatherDisplay');
+        const locationInput = document.getElementById('locationInput');
+        const container = document.querySelector('.container');
+        
+        // Background images for different weather conditions
+        const weatherImages = {
+            clear: 'url(https://example.com/clear-sky.jpg)',
+            cloudy: 'url(https://example.com/cloudy.jpg)',
+            rain: 'url(https://example.com/rainy.jpg)',
+            snow: 'url(https://example.com/snowy.jpg)',
+            thunderstorm: 'url(https://example.com/thunderstorm.jpg)',
+            mist: 'url(https://example.com/mist.jpg)'
+        };
+
+        document.getElementById('getWeatherBtn').addEventListener('click', () => {
+            const location = locationInput.value.trim(); // Trim to remove any extra spaces
+            if (location) {
+                getWeatherByLocation(location);
+            } else {
+                weatherDisplay.innerHTML = '<p class="error">Please enter a valid location.</p>';
+            }
+        });
+
+        document.getElementById('getLocationBtn').addEventListener('click', () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const { latitude, longitude } = position.coords;
+                    getWeatherByCoordinates(latitude, longitude);
+                }, (error) => {
+                    weatherDisplay.innerHTML = '<p class="error">Unable to retrieve your location. Please ensure location services are enabled.</p>';
+                });
+            } else {
+                weatherDisplay.innerHTML = '<p class="error">Geolocation is not supported by this browser.</p>';
+            }
+        });
+
+        function getWeatherByLocation(location) {
+            fetch(`https://api.openweathermap.org/data/2.5/weather?q=${location}&appid=${apiKey}&units=metric`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Location not found');
+                    }
+                    return response.json();
+                })
+                .then(data => displayWeather(data))
+                .catch(error => {
+                    weatherDisplay.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+                });
+        }
+
+        function getWeatherByCoordinates(lat, lon) {
+            fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Unable to retrieve weather data for your location.');
+                    }
+                    return response.json();
+                })
+                .then(data => displayWeather(data))
+                .catch(error => {
+                    weatherDisplay.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+                });
+        }
+
+        function displayWeather(data) {
+            const weatherCondition = data.weather[0].main.toLowerCase();
+            const backgroundImage = getWeatherImage(weatherCondition);
+
+            const weatherHTML = `
+                <h2>${data.name}</h2>
+                <img src="http://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png" alt="${data.weather[0].description}">
+                <p>${data.weather[0].description}</p>
+                <p>Temperature: ${data.main.temp}°C</p>
+                <p>Humidity: ${data.main.humidity}%</p>
+                <p>Wind Speed: ${data.wind.speed} m/s</p>
+            `;
+
+            weatherDisplay.innerHTML = weatherHTML;
+            container.style.backgroundImage = backgroundImage;
+        }
+
+        function getWeatherImage(condition) {
+            if (condition.includes('clear')) {
+                return weatherImages.clear;
+            } else if (condition.includes('clouds')) {
+                return weatherImages.cloudy;
+            } else if (condition.includes('rain')) {
+                return weatherImages.rain;
+            } else if (condition.includes('snow')) {
+                return weatherImages.snow;
+        
